@@ -134,6 +134,22 @@ class Connection(object):
             return [Row(itertools.izip(column_names, row)) for row in cursor]
         finally:
             cursor.close()
+  
+    def transaction(self, query, *parameters, **kwparameters):
+        self._db.begin()
+        cursor = self._cursor()
+        status = True
+        try:
+            for sql in query:
+                cursor.execute(sql, kwparameters or parameters)
+            self._db.commit()
+        except OperationalError, e:
+            self._db.rollback()
+            status = False
+            #raise Exception(e.args[0], e.args[1])
+        finally:
+            cursor.close()
+        return status
 
     def get(self, query, *parameters, **kwparameters):
         """Returns the first row returned for the given query."""
