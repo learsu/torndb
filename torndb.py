@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#
+#coding = utf-8
 # Copyright 2009 Facebook
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -150,6 +150,23 @@ class Connection(object):
     def execute(self, query, *parameters, **kwparameters):
         """Executes the given query, returning the lastrowid from the query."""
         return self.execute_lastrowid(query, *parameters, **kwparameters)
+    #   
+    def transaction(self, query, *parameters, **kwparameters):
+        self._db.begin()
+        cursor = self._cursor()
+        status = True
+        try:
+            for sql in query:
+                cursor.execute(sql, kwparameters or parameters)
+            self._db.commit()
+        except OperationalError, e:
+            self._db.rollback()
+            status = False
+            raise Exception(e.args[0], e.args[1])
+        finally:
+            cursor.close()
+        return status
+
 
     def execute_lastrowid(self, query, *parameters, **kwparameters):
         """Executes the given query, returning the lastrowid from the query."""
@@ -214,6 +231,10 @@ class Connection(object):
         # if it has been idle for too long (7 hours by default).
         if (self._db is None or
             (time.time() - self._last_use_time > self.max_idle_time)):
+            self.reconnect()
+        try:
+            self._db.ping()
+        except:
             self.reconnect()
         self._last_use_time = time.time()
 
