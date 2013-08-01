@@ -231,6 +231,10 @@ class Connection(object):
         if (self._db is None or
             (time.time() - self._last_use_time > self.max_idle_time)):
             self.reconnect()
+        try:
+            self._db.ping()
+        except:
+            self.reconnect()
         self._last_use_time = time.time()
 
     def _cursor(self):
